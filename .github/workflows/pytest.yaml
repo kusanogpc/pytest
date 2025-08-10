@@ -43,4 +43,6 @@ jobs:
       - name: Get Time
         id: get_time
         run: echo "time=$(date)" >> $GITHUB_OUTPUT
-        
+      
+      - name: print github GITHUB_OUTPUT
+        run: echo "ひとつ前のstempの出力 ${{ steps.get_time.outputs.time }}"
