@@ -40,3 +40,7 @@ jobs:
           echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
           echo "GITHUB_ACTOR=$GITHUB_ACTOR"
           echo "TEST1_API_KEY=${{ secrets.TEST1_API_KEY }}"
+      - name: Get Time
+        id: get_time
+        run: echo "time=$(date)" >> $GITHUB_OUTPUT
+        
