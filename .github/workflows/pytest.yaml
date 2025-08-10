@@ -24,3 +24,15 @@ jobs:
       - name: Run tests
         run: |
           pytest tests/
+      
+      - name: Print ENV
+        run: |
+          echo "PYTHONPATH=$PYTHONPATH"
+          echo "PATH=$PATH"
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+          echo "GITHUB_ACTOR=$GITHUB_ACTOR"
+          echo "TEST1_API_KEY=${{ secrets.TEST1_API_KEY }}"
