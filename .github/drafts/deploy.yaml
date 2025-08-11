@@ -1,0 +1,79 @@
+name: CI/CD with Self-hosted Runner and Docker
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-test-deploy:
+    runs-on: self-hosted
+
+    env:
+      IMAGE_NAME: myapp
+      IMAGE_TAG: ${{ github.sha }}
+      PROD_CONTAINER: myapp_prod
+      DOCKER_REGISTRY: mydockerhubuser/myapp # Docker Hub or local registry
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. Docker Build
+      - name: Build Docker image
+        run: |
+          docker build -t $DOCKER_REGISTRY:$IMAGE_TAG .
+
+      # 2. Run tests in container
+      - name: Run tests
+        run: |
+          set -e
+          docker run --rm $DOCKER_REGISTRY:$IMAGE_TAG /bin/bash -c "./scripts/run_tests.sh"
+
+      # 3. Save current prod image for rollback
+      - name: Tag current prod for rollback
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep -q "^$PROD_CONTAINER\$"; then
+            CURRENT_IMAGE=$(docker inspect --format='{{.Config.Image}}' $PROD_CONTAINER)
+            echo "CURRENT_IMAGE=$CURRENT_IMAGE" >> $GITHUB_ENV
+          fi
+
+      # 4. Deploy new version
+      - name: Deploy new container
+        run: |
+          set -e
+          docker stop $PROD_CONTAINER || true
+          docker rm $PROD_CONTAINER || true
+          docker run -d --name $PROD_CONTAINER -p 8080:8080 $DOCKER_REGISTRY:$IMAGE_TAG
+
+      # 5. Health check
+      - name: Health check
+        run: |
+          sleep 5
+          if ! curl -fs http://localhost:8080/health; then
+            echo "Health check failed!"
+            exit 1
+          fi
+
+      # 6. Rollback if failed
+      - name: Rollback on failure
+        if: failure() && env.CURRENT_IMAGE != ''
+        run: |
+          echo "Rolling back to $CURRENT_IMAGE"
+          docker stop $PROD_CONTAINER || true
+          docker rm $PROD_CONTAINER || true
+          docker run -d --name $PROD_CONTAINER -p 8080:8080 $CURRENT_IMAGE
+
+      # 7. Notify success
+      - name: Notify success
+        run: |
+          echo "Deployment successful!"
+          echo "CURRENT_TIME=${{ steps.get_time.outputs.time }}"
+          echo "GITHUB_REF=${{ github.ref }}"
+          echo "GITHUB_SHA=${{ github.sha }}"
+          echo "GITHUB_EVENT_NAME=${{ github.event_name }}"
+          echo "GITHUB_ACTOR=${{ github.actor }}"
+          echo "TEST1_API_KEY=${{ secrets.TEST1_API_KEY }}"
+          echo "DOCKER_REGISTRY=${{ env.DOCKER_REGISTRY }}"
+          echo "IMAGE_NAME=${{ env.IMAGE_NAME }}"
+          echo "IMAGE_TAG=${{ env.IMAGE_TAG }}"
+          echo "CURRENT_IMAGE=${{ env.CURRENT_IMAGE }}"
