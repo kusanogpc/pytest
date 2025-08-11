@@ -1,8 +1,8 @@
 name: CI/CD with Self-hosted Runner and Docker
 
 on:
-  push:
-    branches: [ main ]
+ pull_request:
+   branches: ["main"]
 
 jobs:
   build-test-deploy:
